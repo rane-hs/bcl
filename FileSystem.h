@@ -5,7 +5,8 @@
 #ifndef __BCL_FILESYSTEM_H__
 #define __BCL_FILESYSTEM_H__
 
-#include "time24.h"
+#include <bcl/Time24.h>
+#include <bcl/bclstr.h>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -18,45 +19,65 @@
 namespace bcl{ //bcl::
 
 class FilePath{
-	const str_t drv, dir, fname, ext;
+	str_t drv, dir, fname, ext;
 public:
 	FilePath(const str_t &drv_, const str_t &dir_, const str_t &fname_, const str_t &ext_):
 	  drv(drv_),dir(dir_),fname(fname_),ext(ext_){}
+#ifdef _UNICODE
 	FilePath(const str_t &fPath=L".\\"){
+#else
+	FilePath(const str_t &fPath=".\\"){
+#endif
 		char_t fpath_buf[2048];
-		_wfullpath(fpath_buf, fPath.c_str(), sizeof(fpath_buf));
-		const str_t fullPath = fpath_buf;
+#ifdef _UNICODE
+		_wfullpath(fpath_buf, fPath.c_str(), 2048);
+#else
+		_fullpath(fpath_buf, fPath.c_str(), 2048);
+#endif
 		char_t	l_drv[32];
 		char_t	l_dir[512];
 		char_t	l_fname[256];
 		char_t	l_ext[32];
-		_wsplitpath(fullPath.c_str(), l_drv, l_dir, l_fname, l_ext);
-		FilePath(l_drv, l_dir, l_fname, l_ext);
+#ifdef _UNICODE
+		int retCode = _wsplitpath_s(fpath_buf, l_drv, 32, l_dir, 512, l_fname, 256, l_ext, 32);
+#else
+#	if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+		int retCode = _splitpath_s(fpath_buf, l_drv, 32, l_dir, 512, l_fname, 256, l_ext, 32);
+#	else
+		_splitpath(fullPath.c_str(), l_drv, l_dir, l_fname, l_ext);
+#	endif
+#endif
+		drv = l_drv;
+		dir = l_dir;
+		fname = l_fname;
+		ext = l_ext;
 	};
-	const str_t Fname(){		return fname;	}
-	const str_t Ext(){		return ext;	}
-	const str_t Drv(){		return drv;	}
-	const str_t Dir(){		return dir;	}
-	const str_t DirPath(){	return drv+dir;	}
-	const str_t FileNameExt(){	return fname+ext;	}
+	const str_t Fname() const {		return fname;	}
+	const str_t Ext() const {		return ext;	}
+	const str_t Drv() const {		return drv;	}
+	const str_t Dir() const {		return dir;	}
+	const str_t DirPath() const {	return drv+dir;	}
+	const str_t FileNameExt() const {	return fname+ext;	}
 };
 
-inline const std::wstring DirPath(const std::wstring &fullpath){
+inline const bcl::str_t DirPath(const bcl::str_t &fullpath){
 	return bcl::FilePath(fullpath).DirPath();
 };
-inline const std::wstring FileNameExt(const std::wstring &fullpath){
+inline const bcl::str_t FileNameExt(const bcl::str_t &fullpath){
 	return bcl::FilePath(fullpath).FileNameExt();
 };
 
-namespace Dir{
+typedef intptr_t findHandle;
 
+namespace Dir{
 
 	// ディレクトリ確認
 	inline const bool IsExist(const char_t *fpath)
 	{
 		// パスの分割
-		const str_t ext = bcl::FilePath(fpath).Ext();
-		str_t drv_dir = bcl::FilePath(fpath).DirPath();
+		const bcl::FilePath detailedPath(fpath);
+		const str_t ext = detailedPath.Ext();
+		str_t drv_dir =detailedPath.DirPath();
 
 		// 拡張子がなければ、ファイル名をフォルダとする
 		if (ext.length() < 1)
@@ -79,7 +100,7 @@ namespace Dir{
 		return true;
 	};
 	inline bool	IsExist(const str_t &fpath){ return IsExist(fpath.c_str());};
-#if defined(_MSC_VER) && (_MSC_VER > 1300)	// > VC6
+#ifdef _UNICODE
 	inline bool	IsExist(const char *fpath){ return IsExist(widen(fpath).c_str());};
 	inline bool	IsExist(const std::string &fpath){ return IsExist(widen(fpath).c_str());};
 #endif
@@ -90,7 +111,11 @@ namespace Dir{
 
 		//パスの\\を/に置換する
 		str_t strPath = fpath;
+#ifdef _UNICODE
 		bcl::replace(strPath, L"\\", L"/");
+#else
+		bcl::replace(strPath, "\\", "/");
+#endif
 		// パスの分割
 		FilePath	dividedPath(strPath);
 		//フォルダなし
@@ -103,7 +128,7 @@ namespace Dir{
 		}else{
 			// ディレクトリの最後の'/'を消す
 			str_t	dirBuf = dividedPath.Dir();
-			if(dirBuf[dirBuf.length() - 1] == '/')
+			if(dirBuf[dirBuf.length() - 1] == '\\')
 				dirBuf = dirBuf.substr(0, dirBuf.length() -1 );
 			mkPath = dividedPath.Drv() + dirBuf;
 		}
@@ -111,8 +136,8 @@ namespace Dir{
 		//ファイルパスを最初から捜査しつつフォルダを階層ごとに生成する
 		for(size_t i=0;i<mkPath.length(); i++){
 			if (i >= 1) {
-				if ((mkPath[i-1] > 0) && (mkPath[i] == '/'))
-					int ret = CreateDirectory(mkPath.substr(0, i-1).c_str(), NULL);
+				if ((mkPath[i-1] > 0) && (mkPath[i] == '\\'))
+					int ret = CreateDirectory(mkPath.substr(0, i).c_str(), NULL);
 			}
 		}
 		int ret = CreateDirectory(mkPath.c_str(), NULL);
@@ -145,7 +170,7 @@ namespace Dir{
 	};
 	inline const char Clear(const char *fpath)
 	{
-		long hFind;
+		intptr_t hFind;
 		struct _finddata_t dt;
 
 		//存在確認
@@ -174,7 +199,7 @@ namespace Dir{
 	};
 	inline const bool IsExistDef(const char *searchDef)
 	{
-		long hFind;
+		findHandle hFind;
 		struct _finddata_t dt;
 
 		hFind = _findfirst(searchDef, &dt);
@@ -191,6 +216,40 @@ namespace Dir{
 			_findclose(hFind);
 		}
 		return false;
+	}
+	inline void DeleteDef(const bcl::str_t &searchDef)
+	{
+		findHandle hFind;
+		const FilePath	detailedPath(searchDef);
+#ifdef _UNICODE
+		struct _wfinddata_t dt;
+		hFind = _wfindfirst(searchDef.c_str(), &dt);
+#else
+		struct _finddata_t dt;
+		hFind = _findfirst(searchDef.c_str(), &dt);
+#endif
+		if (hFind != -1) {
+			do {
+#ifdef _UNICODE
+				if (wcscmp(dt.name, L".") == 0 || wcscmp(dt.name, L"..") == 0)
+					continue;
+
+				if (dt.attrib & _A_SUBDIR) {
+					Delete(bcl::format("%s\\%s", detailedPath.DirPath().c_str(), dt.name).c_str()
+							);
+				}
+			} while (_wfindnext(hFind, &dt) == 0);
+#else
+				if (strcmp(dt.name, ".") == 0 || strcmp(dt.name, "..") == 0)
+					continue;
+
+				if (dt.attrib & _A_SUBDIR) {
+					Delete(bcl::format("%s\\%s", detailedPath.DirPath().c_str(), dt.name).c_str());
+				}
+			} while (_findnext(hFind, &dt) == 0);
+#endif
+			_findclose(hFind);
+		}
 	}
 };	//Dir::
 namespace File{
@@ -267,23 +326,6 @@ namespace File{
 	{
 		return Copy(from.c_str(), to.c_str());
 	}
-#if defined(_MSC_VER) && (_MSC_VER > 1300)	// > VC6
-	inline const char Copy(const char *spath, const char *fpath)
-	{
-		return Copy(bcl::widen(spath), bcl::widen(fpath));
-	};
-	inline const char Copy(const std::string &from, const std::string &to)
-	{
-		return Copy(from.c_str(), to.c_str());
-	}
-	inline const int Move(const char_t *spath, const char_t *fpath)
-	{
-		BOOL nRet = Copy(spath, fpath);
-		if(nRet == FALSE)
-			return -1;
-		return DeleteFile(spath);
-	};
-#endif
 	inline const bool IsExist(const str_t &fpath)
 	{
 		OFSTRUCT	ob;
@@ -296,7 +338,22 @@ namespace File{
 			return true;
 		}
 	};
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+	inline const int Move(const char_t *spath, const char_t *fpath)
+	{
+		BOOL nRet = Copy(spath, fpath);
+		if(nRet == FALSE)
+			return -1;
+		return DeleteFile(spath);
+	};
+#ifdef _UNICODE
+	inline const char Copy(const char *spath, const char *fpath)
+	{
+		return Copy(bcl::widen(spath), bcl::widen(fpath));
+	};
+	inline const char Copy(const std::string &from, const std::string &to)
+	{
+		return Copy(from.c_str(), to.c_str());
+	}
 	inline const bool IsExist(const char *fpath)
 	{
 		return IsExist(bcl::widen(fpath));
@@ -317,7 +374,7 @@ namespace File{
 	********************************************************************/
 	inline const bool IsExistDef(const char *searchDef)
 	{
-		long hFind;
+		findHandle hFind;
 		struct _finddata_t dt;
 
 		hFind = _findfirst(searchDef, &dt);
@@ -345,11 +402,12 @@ namespace File{
 				FALSE：失敗
 	  説明  ： 指定された検索条件にヒットするファイルがある場合、フルパスを返します
 	********************************************************************/
-	inline const std::wstring FindDef(const wchar_t *searchDef)
+	inline const bcl::str_t FindDef(const bcl::char_t *searchDef)
 	{
-		long hFind;
-		struct _wfinddata_t dt;
+		findHandle hFind;
 
+#ifdef _UNICODE
+		struct _wfinddata_t dt;
 		hFind = _wfindfirst(searchDef, &dt);
 		if (hFind != -1) {
 			do {
@@ -369,8 +427,28 @@ namespace File{
 	};
 	inline const std::string FindDef(const char *searchDef)
 	{	return bcl::narrow(FindDef(bcl::widen(searchDef).c_str())); }
+#else
+		struct _finddata_t dt;
+		hFind = _findfirst(searchDef, &dt);
+		if (hFind != -1) {
+			do {
+				if (strcmp(dt.name, ".") == 0 || strcmp(dt.name, "..") == 0)
+					continue;
 
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+				if (dt.attrib == _A_SUBDIR) {
+					continue;
+				} else {
+					_findclose(hFind);
+					return bcl::format("%s%s", bcl::FilePath(searchDef).DirPath().c_str(), dt.name);
+				}
+			} while (_findnext(hFind, &dt) == 0);
+			_findclose(hFind);
+		}
+		return "";
+	};
+#endif
+
+#ifdef _UNICODE
 	inline void FindDef(const wchar_t *searchDef, std::vector<std::wstring> *pList)
 	{
 		long hFind;
@@ -436,9 +514,9 @@ namespace File{
 		return bcl::time24(st.st_mtime);
 	};
 #else
-	inline void FindDef(const char *searchDef, std::vector<std::string> *pList)
+	inline void FindDef(const char *searchDef, std::vector<bcl::str_t> *pList)
 	{
-		long hFind;
+		findHandle hFind;
 		struct _finddata_t dt;
 		pList->clear();
 
@@ -451,7 +529,7 @@ namespace File{
 				if (dt.attrib == _A_SUBDIR) {
 					continue;
 				} else {
-					pList->push_back(bcl::format(L"%s%s", bcl::FilePath(searchDef).DirPath().c_str(), dt.name));
+					pList->push_back(bcl::format("%s%s", bcl::FilePath(searchDef).DirPath().c_str(), dt.name));
 				}
 			} while (_findnext(hFind, &dt) == 0);
 			_findclose(hFind);
@@ -459,7 +537,7 @@ namespace File{
 	};
 	inline const int RemoveDef(const char *searchDef)
 	{
-		long hFind;
+		findHandle hFind;
 		struct _finddata_t dt;
 		int out = 0;
 
@@ -472,7 +550,7 @@ namespace File{
 				if (dt.attrib == _A_SUBDIR) {
 					continue;
 				} else {
-					bcl::File::Delete(bcl::format(L"%s%s", bcl::FilePath(searchDef).DirPath().c_str(), dt.name).c_str());
+					bcl::File::Delete(bcl::format("%s%s", bcl::FilePath(searchDef).DirPath().c_str(), dt.name).c_str());
 					out++;
 				}
 			} while (_findnext(hFind, &dt) == 0);
@@ -480,7 +558,7 @@ namespace File{
 		}
 		return out;
 	};
-	inline const bcl::time24	mTime(const char *file_name)
+	inline const bcl::time24	mTime(const bcl::char_t *file_name)
 	{
 		const bcl::time24 errTime(0,0,0,0,0,0);
 		if(!IsExist(file_name))	return errTime;
@@ -490,27 +568,27 @@ namespace File{
 
 		return bcl::time24(st.st_mtime);
 	};
-	inline const bcl::time24	mTime(const wchar_t *file_name)
-	{
-		const bcl::time24 errTime(0,0,0,0,0,0);
-		if(!IsExist(file_name))	return errTime;
-		struct _stat st;
-		const int ret = _wstat(file_name, &st);
-		if(ret != 0) 	return errTime;
-
-		return bcl::time24(st.st_mtime);
-	};
 #endif
 };
+
 namespace FileSystem{
 	//ファイルからフォルダ指定でのコピー・移動
 
+#ifdef _UNICODE
 	inline const int CopyFileToDir(const char_t *spath, const char_t *toDir){
-		return File::Copy(spath, bcl::format(L"%s\\%s", toDir, bcl::FilePath(spath).FileNameExt().c_str()).c_str());
+		return bcl::File::Copy(spath, bcl::format(L"%s\\%s", toDir, bcl::FilePath(spath).FileNameExt().c_str()).c_str());
 	}
 	inline const int MoveFileToDir(const char_t *spath, const char_t *toDir){
-		return File::Move(spath, bcl::format(L"%s\\%s", toDir, bcl::FilePath(spath).FileNameExt().c_str()).c_str());
+		return bcl::File::Move(spath, bcl::format(L"%s\\%s", toDir, bcl::FilePath(spath).FileNameExt().c_str()).c_str());
 	}
+#else
+	inline const int CopyFileToDir(const char_t *spath, const char_t *toDir){
+		return bcl::File::Copy(spath, bcl::format("%s\\%s", toDir, bcl::FilePath(spath).FileNameExt().c_str()).c_str());
+	}
+	inline const int MoveFileToDir(const char_t *spath, const char_t *toDir){
+		return bcl::File::Move(spath, bcl::format("%s\\%s", toDir, bcl::FilePath(spath).FileNameExt().c_str()).c_str());
+	}
+#endif
 };	//FileSystem::
 
 } //bcl::

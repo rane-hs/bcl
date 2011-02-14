@@ -3,6 +3,10 @@
 #include <string>
 #include <bcl/bclstr.h>
 
+#ifdef BCL_AUTO_SOCKET_LIBRALY_LINK
+#pragma comment(lib, "Ws2_32.lib")
+#endif
+
 namespace bcl{
 	struct sock_info{
 		std::string name;
@@ -21,8 +25,7 @@ namespace bcl{
 		};
 		use_socket()
 		{
-
-			WSAStartup(2 , &wsaData);
+			WSAStartup(2 , &wsa);
 		}
 		~use_socket(){	WSACleanup();		}
 	};
@@ -58,7 +61,7 @@ namespace bcl{
 				if (hep == NULL) {
 					host = inet_addr(host_.c_str());
 					if (host == -1) {
-						return -2;
+						return -1;
 					}
 				} else {
 					host = **(u_long **)hep->h_addr_list;
@@ -142,7 +145,7 @@ namespace bcl{
 					int actual  = recvfrom(socket_, buff, len, 0, (LPSOCKADDR)&sin, &sin_len);
 					if (actual < 0) {
 						// recvie error()
-						return -1;
+						return -11;
 					}
 					if (actual > 0) {
 						if (host_.length() > 0) {
@@ -155,10 +158,10 @@ namespace bcl{
 
 				if (err < 0) {
 					/* select() error */
-					return -2;
+					return -12;
 				}
 				/* timeout */
-				return -3;
+				return -13;
 			}
 		};
 	};
@@ -177,27 +180,27 @@ namespace bcl{
      
 			/* ポート番号からサービス情報を得る */
 			if ((sin.sin_port = htons(port_)) == 0) {
-				socket_ = -1;
+				socket_ = -101;
 				return;
 			}
 
 			struct protoent		*ppe;
 			/* プロトコル名からプロトコル情報を得る */
 			if ((ppe = getprotobyname("udp")) == 0) {
-				socket_ = -2;
+				socket_ = -102;
 				return;
 			}
 
 			/* ソケットの確保 */
 			socket_ = socket(PF_INET, SOCK_DGRAM, ppe->p_proto);
 			if (socket_ < 0) {
-				socket_ = -3;
+				socket_ = -103;
 				return;
 			}
 
 			/* バインド */
 			if (bind(socket_, (struct sockaddr *)&sin, sizeof(sin)) < 0) {
-				socket_ = -4;
+				socket_ = -104;
 				return;
 			}
 
@@ -206,7 +209,7 @@ namespace bcl{
 				ipMreq.imr_multiaddr.s_addr = inet_addr(multicastname.c_str());
 				ipMreq.imr_interface.s_addr = INADDR_ANY;
 				if (setsockopt(socket_, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&ipMreq, sizeof(ipMreq)) < 0) {
-					socket_ = -5;
+					socket_ = -105;
 					return;
 				}
 			}
@@ -216,7 +219,6 @@ namespace bcl{
 	inline const int udp_send(const std::string &host_, const int port_, char *buff, int len, 
 		int recv_len, int timeout, const std::string &multicastname ="")
 	{
-		use_socket	udp_use;
 		detail::udp	sender(host_, port_);
 		if(sender.Socket() < 0) return sender.Socket();
 

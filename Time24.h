@@ -14,11 +14,35 @@ namespace bcl{	//bcl::
 #define TIME24_YMDHN "%24Y/%24M/%24D %24H:%M"
 #define TIME24_YMD "%24Y/%24M/%24D"
 
+#define TIME24_YMDHNS_U "%24Y%24M%24D%24H%M%S"
+#define TIME24_YMDHN_U  "%24Y%24M%24D%24H%M"
+#define TIME24_YMD_U    "%24Y%24M%24D"
+
 #define TIME24_YMDHN_HYPHEN "%24Y-%24m-%24d %24H:%M:%S"
 
 #define TIME24_YMDHNS_NO_ZERO "%24Y/%24m/%24d %24H:%M:%S"
 #define TIME24_YMDHN_NO_ZERO "%24Y/%24m/%24d %24H:%M"
 #define TIME24_YMD_NO_ZERO "%24Y/%24m/%24d"
+
+#ifdef _UNICODE
+#define TIME_YMDHNS_W L"%Y/%m/%d %H:%M:%S"
+#define TIME_YMDHN_W L"%Y/%m/%d %H:%M"
+#define TIME_YMD_W L"%Y/%m/%d"
+
+#define TIME24_YMDHNS_W L"%24Y/%24M/%24D %24H:%M:%S"
+#define TIME24_YMDHN_W L"%24Y/%24M/%24D %24H:%M"
+#define TIME24_YMD_W L"%24Y/%24M/%24D"
+
+#define TIME24_YMDHNS_U_W L"%24Y%24M%24D%24H%M%S"
+#define TIME24_YMDHN_U_W  L"%24Y%24M%24D%24H%M"
+#define TIME24_YMD_U_W    L"%24Y%24M%24D"
+
+#define TIME24_YMDHN_HYPHEN_W L"%24Y-%24m-%24d %24H:%M:%S"
+
+#define TIME24_YMDHNS_NO_ZERO_W L"%24Y/%24m/%24d %24H:%M:%S"
+#define TIME24_YMDHN_NO_ZERO_W L"%24Y/%24m/%24d %24H:%M"
+#define TIME24_YMD_NO_ZERO_W L"%24Y/%24m/%24d"
+#endif
 
 typedef clx::date_time clx_time;
 /*!-------------------------------------------------------------------
@@ -53,6 +77,8 @@ typedef clx::date_time clx_time;
  * time24 operator= 代入
 -------------------------------------------------------------------*/
 
+//TODO: lexical_castに投げれるように修正をする（コピーctorなどなど）
+
 //time24 : 
 class time24 : public clx_time
 {
@@ -72,7 +98,8 @@ public:
 	using clx_time::totaldays;
 	using clx_time::to_string;
 	using clx_time::from_string;
-
+	using clx_time::after;
+	using clx_time::before;
 
 	//ctors
 	//デフォルトで現在時刻にはしない！
@@ -92,26 +119,11 @@ public:
 		reset(); return *this;
 	}
 
-	//指定したdurationを追加した物を返す
-	//個人的にわかりやすくなるようなラッパである
-	time24 const ymd_duration(value_type const &yy=0, value_type const &mm=0, value_type const &dd=0) const
-	{
-		return time24(*this + clx::time_duration(yy, mm, dd));
-	}
-	time24 const time_duration(value_type const &hh=0, value_type const &nn=0, value_type const &ss=0) const
-	{
-		return time24(*this + clx::hours(hh) + clx::minutes(nn) + clx::seconds(ss));
-	}
-	time24 const set_ymd_duration(value_type const &yy=0, value_type const &mm=0, value_type const &dd=0)
-	{
-		return *this = ymd_duration(yy,mm,dd);
-	}
-	time24 const set_time_duration(value_type const &hh=0, value_type const &nn=0, value_type const &ss=0)
-	{
-		return *this = time_duration(hh,nn,ss);
-	}
-
-	const std::string to_string24(const std::string &desc) const
+#ifdef _UNICODE
+	const std::string to_string24(const std::string &desc=TIME24_YMDHNS) const
+#else
+	const std::string to_string24(const std::string &desc=TIME24_YMDHNS) const
+#endif
 	{
 		std::string o = desc;
 		bcl::replace(o, "%24Y", bcl::format("%04d", year24()).c_str());
@@ -125,10 +137,21 @@ public:
 		return to_string(o.c_str());
 	}
 
+	//operators
+	const time24 operator+=(const clx::time_duration &rd)
+	{
+		return *this = time24(c_time() + rd.c_time());
+	}
+	const time24 operator-=(const clx::time_duration &rd)
+	{
+		return *this = time24(c_time() - rd.c_time());
+	}
+
+	//accessors
 	time24 const yesterday() const
 	{
-		//ほんとはこう書きたい
-		return ymd_duration(0, 0, -1);
+		//c_timeを経由しないでかけるようになるべき
+		return time24(c_time() - clx::days(1).c_time());
 	}
 	value_type const hour24() const
 	{
@@ -163,11 +186,38 @@ public:
 		return true;
 	}
 };
+inline const time24 time_from_string(const std::string &src, const std::string &fmt="%Y/%m/%d %H:%M:%S")
+{
+	time24 dest;
+	dest.from_string(src, fmt);
+	return dest;
+}
+inline const time24 time_from_string(const char *src, const char *fmt)
+{
+	return time_from_string(std::string(src), std::string(fmt));
+}
+inline const clx::time_duration operator-(const time24 &ld, const time24 &rd)
+{
+	const size_t	src = static_cast<size_t>(ld.c_time() - rd.c_time());
+	const size_t days_buf = src/(60*60*24);
+	const size_t hours_buf = days_buf/24;
+	const size_t min_buf =  hours_buf/60;
+	const size_t sec_buf =  min_buf/60;
+	return clx::time_duration(days_buf, hours_buf%24, min_buf%(60), sec_buf%(60));
+}
+inline const time24 operator+(const time24 &ld, const clx::time_duration &rd)
+{
+	return time24(ld.c_time() + rd.c_time());
+}
+inline const time24 operator-(const time24 &ld, const clx::time_duration &rd)
+{
+	return time24(ld.c_time() - rd.c_time());
+}
 
 inline const time24 NowTime(){ time24 s; return s.set_now(); }
 inline const std::string ttos24_ymd(const time24 &tim){ return tim.to_string24(TIME24_YMD); }
-inline const std::string ttos24(const time24 &tim){ return tim.to_string24(TIME24_YMDHNS); }
-inline const std::string ttos(const time24 &tim){ return tim.to_string(TIME_YMDHNS); }
+inline const std::string ttos24(const time24 &tim, const std::string &s=TIME24_YMDHNS){ return tim.to_string24(s.c_str()); }
+inline const std::string ttos(const time24 &tim, const std::string &s = TIME_YMDHNS){ return tim.to_string(s.c_str()); }
 inline const std::string ttos_ymd(const time24 &tim){ return tim.to_string(TIME_YMD); }
 inline const std::string ttos24_ymd(const time_t &tim)
 {
@@ -189,6 +239,14 @@ inline const std::string ttos_ymd(const time_t &tim)
 	time24 s(tim);
 	return s.to_string(TIME_YMD); 
 }
+inline const time_t string_to_time(const std::string &s)
+{ 
+	time24	src;
+	src.from_string(s.c_str(), TIME_YMDHNS);
+	return src.c_time();
+}
+
+
 
 }//bcl::
 

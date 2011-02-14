@@ -1,8 +1,9 @@
 //#include "systemconst.h"
 #ifndef __UPDATEINFO_H__
 #define __UPDATEINFO_H__
-#include "FileSystem.h"
-#include "bclstr.h"
+#include <bcl/FileSystem.h>
+#include <bcl/bclstr.h>
+#include <bcl/Time24.h>
 
 namespace bcl{	//bcl::
 
@@ -17,11 +18,7 @@ namespace bcl{	//bcl::
 class ManagedFile{
 public:
 	//constructor
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-	ManagedFile(const wchar_t *fpath = NULL)
-#else
-	ManagedFile(const char *fpath = NULL)
-#endif
+	ManagedFile(const bcl::char_t *fpath = NULL)
 	{
 		if(fpath)	filePath_ = fpath;
 		fUpdTime = bcl::NowTime();
@@ -63,17 +60,9 @@ public:
 		else
 			return bcl::time24(bcl::File::mTime(filePath_.c_str()));
 	}
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-	const std::wstring FilePath() const{ return filePath_;}
-#else
-	const std::string FilePath() const{ return filePath_;}
-#endif
+	bcl::str_t FilePath() const{ return filePath_;}
 protected:
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-	std::wstring 	filePath_;
-#else
-	std::string 	filePath_;
-#endif
+	bcl::str_t		filePath_;
 	bcl::time24		fUpdTime;
 };
 

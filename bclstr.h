@@ -15,7 +15,7 @@
 
 namespace bcl{
 
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+#ifdef _UNICODE	// > VC6
 	typedef wchar_t	char_t;
 	typedef std::wstring	str_t;
 #else
@@ -63,11 +63,11 @@ class basic_split :protected std::vector<T>{
 #endif
 	
 	using array_type::clear;
-	using array_type::empty;
 	using array_type::begin;
 	using array_type::end;
 public:
 	//using
+	using array_type::empty;
 	using array_type::at;
 	using array_type::size;
 	using array_type::operator[];
@@ -150,11 +150,12 @@ typedef basic_split<std::wstring> wsplit;
 //ワイド文字列からマルチバイト文字列
 //ロケール依存
 inline const std::string narrow(const std::wstring &src) {
+
 	std::string dest;
 	char *mbs = new char[src.length() * MB_CUR_MAX + 1];
 #if (_MSC_VER > 1300)		//VC2003-
 	size_t	conved_length;
-	wcstombs_s(&conved_length, mbs, src.length(), src.c_str(), src.length() * MB_CUR_MAX + 1);
+	wcstombs_s(&conved_length, mbs, src.length() * MB_CUR_MAX + 1, src.c_str(), src.length() * MB_CUR_MAX + 1);
 #else
 	wcstombs(mbs, src.c_str(), src.length() * MB_CUR_MAX + 1);
 #endif
@@ -311,6 +312,36 @@ inline const Str trim(const Str &s, const Str &t)
 };
 
 /*
+	判定(数字)
+*/
+template <class Str>
+const bool is_numeric(const Str &s)
+{
+	//数字検索
+#ifdef _UNICODE
+	size_t pos = s.find_first_of(L"0123456789");
+#else
+	size_t pos = s.find_first_of("0123456789");
+#endif
+	//数字がない
+	if ( pos == Str::npos ) {
+		return false;
+	}
+
+	//文字列検索
+#ifdef _UNICODE
+	pos = s.find_first_not_of(L"+-.0123456789");
+#else
+	pos = s.find_first_not_of("+-.0123456789");
+#endif
+	//数字以外がある
+	if ( pos != Str::npos ) {
+		return false;
+	}
+
+	return true;
+}
+/*
 	文字列の矩形化
 	assert(rectangled("123456789", 3) == "123\n456\n789")
 */
@@ -362,12 +393,9 @@ inline const std::string ReadFileString(const std::string &fpath){
 }
 
 /*
- 文字列<- -> 数値　相互変換処理（撤廃予定）
- VC2005以降では、boost::lexical_castを用いること。
-
+ 文字列<- -> 数値　相互変換処理
  boost::lexical_castではキャストに失敗すると例外が飛ぶので
- 例外を投げないlexical_cast_s<T>などの定義をしてもいいかも知れない
-	案：bcl::lexical_cast_s<T,N>
+ 例外を投げないlexical_cast_s<T>などを定義
 	bcl::lexical_cast_s<int,-1>("5");	//-1が帰ってきたらエラー！
 */
 /*!------------------------------------------------------------------
@@ -385,13 +413,27 @@ inline const T lexical_cast(const std::wstring &s){
 		0:
 		static_cast<T>(_wtol(s.c_str()));
 }
-template <typename T>
-inline const T to_float(const std::string &s){
+inline const double to_float(const std::string &s){
 	return (s.length() < 1)?
 		0.0:
-		static_cast<T>(atof(s.c_str()));
+		atof(s.c_str());
 }
 
+#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+//VC6ではテンプレートコンパイルにバグがあるため、これらは使えない
+
+template <>
+inline const float lexical_cast<float>(const std::string &s){
+	return (s.length() < 1)?
+		0.0:
+		static_cast<float>(atof(s.c_str()));
+}
+template <>
+inline const double lexical_cast<double>(const std::string &s){
+	return (s.length() < 1)?
+		0.0:
+		static_cast<double>(atof(s.c_str()));
+}
 template <typename T, typename S>
 const T lexical_cast_s(const S &src, T err) {
 	try{
@@ -403,11 +445,14 @@ const T lexical_cast_s(const S &src, T err) {
 	}
 	return dest;
 }
+#endif
 /*!------------------------------------------------------------------
 	to string conversion
 -------------------------------------------------------------------*/
 inline const std::string to_string(const int &a){	return bcl::format("%d", a); }
+inline const std::string to_string(const unsigned int &a){	return bcl::format("%d", a); }
 inline const std::string to_string(const long &a){	return bcl::format("%ld", a); }
+inline const std::string to_string(const unsigned long &a){	return bcl::format("%ld", a); }
 inline const std::string to_string(const float &a){	return bcl::format("%f", a); }
 inline const std::string to_string(const double &a){	return bcl::format("%lf", a); }
 inline const std::string to_string(const long double &a){	return bcl::format("%lf", a); }

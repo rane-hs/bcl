@@ -37,8 +37,8 @@ public:
 	virtual void SetNext()
 	{ 
 		nextTime.reset();
-		nextTime.set_ymd_duration(0,0,1);
-		nextTime.set_time_duration(0,0,1);
+		nextTime += clx::days(1);
+		nextTime += clx::seconds(1);
 	};
 	virtual int Terminate(){ return 0;};
 	virtual const bool QuitCheck(){ return false;};

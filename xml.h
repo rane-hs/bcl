@@ -8,7 +8,7 @@
 #define __BCL_XML_H__
 
 #include <string>
-#include "bclstr.h"
+#include <bcl/bclstr.h>
 //MSXMLを使用するためのインポート
 #ifdef _MSC_VER
 #	import "msxml3.dll"
@@ -45,7 +45,7 @@ inline const IXMLDOMNodeListPtr GetNodeList(xmlDocumentPtr pDoc, const std::stri
 		pDoc->selectNodes(xPath.c_str()) :
 		NULL;
 }
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+#ifdef _UNICODE
 inline const std::wstring NodeTextW(xmlNodePtr pNode)
 {	BSTR bstrdest;
 	pNode->get_text(&bstrdest);
@@ -78,6 +78,20 @@ inline xmlDocumentPtr XMLdocument()
 	return pDoc;
 };
 inline xmlDocumentPtr XMLdocument(const std::string fpath)
+{
+	//ＸＭＬファイルのロード
+	xmlDocumentPtr pDoc = XMLdocument();
+	if (pDoc != NULL) {
+		pDoc->validateOnParse = VARIANT_FALSE;
+		pDoc->resolveExternals = VARIANT_FALSE;
+		if (pDoc->load(fpath.c_str()) == VARIANT_FALSE) {
+			//printf("%s\n", (const char *)pDoc->parseError->Getreason());
+			return NULL;
+		}
+	}
+	return pDoc;
+};
+inline xmlDocumentPtr XMLdocument(const std::wstring fpath)
 {
 	//ＸＭＬファイルのロード
 	xmlDocumentPtr pDoc = XMLdocument();
