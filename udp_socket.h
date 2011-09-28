@@ -1,3 +1,6 @@
+#ifndef BCL_UDP_SOCKET_H
+#define BCL_UDP_SOCKET_H
+
 #include <windows.h>
 #include <winsock.h>
 #include <string>
@@ -8,11 +11,11 @@
 #endif
 
 namespace bcl{
-	struct sock_info{
+	typedef struct sock_info{
 		std::string name;
 		int port;
 		sock_info(const std::string &n_="127.0.0.1", int p_=0):name(n_),port(p_){}
-	};
+	}sock_info_t;
 	class use_socket
 	{
 		WSADATA wsa;
@@ -137,8 +140,12 @@ namespace bcl{
 				tv.tv_usec = 0;				/* ミリ秒 */
 				FD_ZERO(&fds);
 				FD_SET(socket_, &fds);
-				const int err = select(FD_SETSIZE, &fds, NULL, NULL, &tv);
-				if ((err > 0) && (FD_ISSET(socket_, &fds))) {
+				const int err = select(NULL/*FD_SETSIZE*/, &fds, NULL, NULL, &tv);
+				if (err < 0) {
+					/* select() error */
+					return -12;
+				}
+				if (FD_ISSET(socket_, &fds)) {
 					SOCKADDR_IN		sin;
 					memset(&sin, 0, sizeof(sin));
 					int sin_len = sizeof(sin);
@@ -156,10 +163,6 @@ namespace bcl{
 					}
 				}
 
-				if (err < 0) {
-					/* select() error */
-					return -12;
-				}
 				/* timeout */
 				return -13;
 			}
@@ -167,8 +170,12 @@ namespace bcl{
 	};
 	class udp_server : public detail::udp
 	{
+		std::string multicast_;
 	public:
-		udp_server(const UINT p, const std::string &multicastname=""):detail::udp("", p)
+		udp_server(const UINT p, const std::string &multicastname=""):detail::udp("", p),
+			multicast_(multicastname)
+		{StartRecieve();}
+		void StartRecieve()
 		{
 			struct sockaddr_in	sin;
 			struct ip_mreq		ipMreq;
@@ -204,9 +211,9 @@ namespace bcl{
 				return;
 			}
 
-			if (multicastname.length() > 0) {
+			if (multicast_.length() > 0) {
 				// マルチキャストの場合
-				ipMreq.imr_multiaddr.s_addr = inet_addr(multicastname.c_str());
+				ipMreq.imr_multiaddr.s_addr = inet_addr(multicast_.c_str());
 				ipMreq.imr_interface.s_addr = INADDR_ANY;
 				if (setsockopt(socket_, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&ipMreq, sizeof(ipMreq)) < 0) {
 					socket_ = -105;
@@ -214,6 +221,10 @@ namespace bcl{
 				}
 			}
 			/* 正常終了 */
+		}
+		void disconnct()
+		{
+			closesocket(socket_);
 		}
 	};
 	inline const int udp_send(const std::string &host_, const int port_, char *buff, int len, 
@@ -224,8 +235,17 @@ namespace bcl{
 
 		const int sendRet = sender.send(buff, len);
 		if(sendRet < 0) return sendRet;
-		sock_info info_buf;
+		sock_info_t info_buf;
 		return sender.recv(buff, recv_len, timeout, info_buf);
+	}
+	inline const int udp_send_only(const std::string &host_, const int port_, char *buff, int len, 
+		const std::string &multicastname ="")
+	{
+		detail::udp	sender(host_, port_);
+		if(sender.Socket() < 0) return sender.Socket();
+
+		return sender.send(buff, len);
 	}
 };
 
+#endif //BCL_UDP_SOCKET_H

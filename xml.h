@@ -26,48 +26,13 @@ public:
 	~com_init(){ CoUninitialize();}
 };
 #ifdef _MSC_VER
-typedef MSXML2::IXMLDOMDocumentPtr xmlDocumentPtr;
 typedef MSXML2::IXMLDOMNodePtr xmlNodePtr;
 typedef MSXML2::IXMLDOMNodePtr xmlAttributePtr;
 typedef MSXML2::IXMLDOMNodeListPtr xmlNodeListPtr;
-inline const xmlNodePtr GetNode(xmlDocumentPtr pDoc, const std::string &xPath)
-{	return (pDoc)?
-		pDoc->selectSingleNode(xPath.c_str()) :
-		NULL;
-}
-inline const xmlAttributePtr GetAttr(xmlDocumentPtr pDoc, const std::string &xPath)
-{	return (pDoc)?
-		pDoc->selectSingleNode(xPath.c_str()) :
-		NULL;
-}
-inline const IXMLDOMNodeListPtr GetNodeList(xmlDocumentPtr pDoc, const std::string &xPath)
-{	return (pDoc)?
-		pDoc->selectNodes(xPath.c_str()) :
-		NULL;
-}
-#ifdef _UNICODE
-inline const std::wstring NodeTextW(xmlNodePtr pNode)
-{	BSTR bstrdest;
-	pNode->get_text(&bstrdest);
-	std::wstring dest(bstrdest);
-	SysFreeString(bstrdest);
-	return dest;
-}
-inline const std::string NodeText(xmlNodePtr pNode)
-{	return bcl::narrow(NodeTextW(pNode));
-}
-#else
-inline const std::string NodeText(xmlNodePtr pNode)
-{	return static_cast<LPCTSTR>(pNode->text);
-}
-#endif
 
-inline const xmlNodePtr NextNode(xmlNodeListPtr &pList)
-{	return pList->nextNode();
-}
-inline xmlDocumentPtr XMLdocument()
+inline MSXML2::IXMLDOMDocumentPtr XMLdocument()
 {
-	xmlDocumentPtr pDoc;
+	MSXML2::IXMLDOMDocumentPtr pDoc;
 	
 	//ƒCƒ“ƒXƒ^ƒ“ƒX‚Ìì¬
 	HRESULT hr = pDoc.CreateInstance(__uuidof(MSXML2::DOMDocument30));
@@ -77,10 +42,10 @@ inline xmlDocumentPtr XMLdocument()
 	pDoc->async = VARIANT_FALSE;
 	return pDoc;
 };
-inline xmlDocumentPtr XMLdocument(const std::string fpath)
+inline MSXML2::IXMLDOMDocumentPtr XMLdocument(const std::string fpath)
 {
 	//‚w‚l‚kƒtƒ@ƒCƒ‹‚Ìƒ[ƒh
-	xmlDocumentPtr pDoc = XMLdocument();
+	MSXML2::IXMLDOMDocumentPtr pDoc = XMLdocument();
 	if (pDoc != NULL) {
 		pDoc->validateOnParse = VARIANT_FALSE;
 		pDoc->resolveExternals = VARIANT_FALSE;
@@ -91,10 +56,10 @@ inline xmlDocumentPtr XMLdocument(const std::string fpath)
 	}
 	return pDoc;
 };
-inline xmlDocumentPtr XMLdocument(const std::wstring fpath)
+inline MSXML2::IXMLDOMDocumentPtr XMLdocument(const std::wstring fpath)
 {
 	//‚w‚l‚kƒtƒ@ƒCƒ‹‚Ìƒ[ƒh
-	xmlDocumentPtr pDoc = XMLdocument();
+	MSXML2::IXMLDOMDocumentPtr pDoc = XMLdocument();
 	if (pDoc != NULL) {
 		pDoc->validateOnParse = VARIANT_FALSE;
 		pDoc->resolveExternals = VARIANT_FALSE;
@@ -105,10 +70,10 @@ inline xmlDocumentPtr XMLdocument(const std::wstring fpath)
 	}
 	return pDoc;
 };
-inline xmlDocumentPtr XMLdocument(_bstr_t bstrXml)
+inline MSXML2::IXMLDOMDocumentPtr XMLdocument(_bstr_t bstrXml)
 {
 	// ‚w‚l‚kƒf[ƒ^‚Ìƒ[ƒh
-	xmlDocumentPtr pDoc = XMLdocument();
+	MSXML2::IXMLDOMDocumentPtr pDoc = XMLdocument();
 	if (pDoc != NULL) {
 		pDoc->validateOnParse = VARIANT_FALSE;
 		pDoc->resolveExternals = VARIANT_FALSE;

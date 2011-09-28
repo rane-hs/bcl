@@ -81,7 +81,7 @@ namespace Dir{
 
 		// 拡張子がなければ、ファイル名をフォルダとする
 		if (ext.length() < 1)
-			drv_dir += ext;
+			drv_dir += detailedPath.Fname();
 
 		if(drv_dir.length() < 1) return false;
 
@@ -168,7 +168,8 @@ namespace Dir{
 		else
 			return 0;
 	};
-	inline const char Clear(const char *fpath)
+	inline const char Delete(const str_t &dirpath){ return Delete(dirpath.c_str()); }
+	inline const char Clear(const char_t *fpath)
 	{
 		intptr_t hFind;
 		struct _finddata_t dt;
@@ -185,18 +186,23 @@ namespace Dir{
 				if (strcmp(dt.name, ".") == 0 || strcmp(dt.name, "..") == 0)
 					continue;
 
-				const std::string delPath = bcl::format("%s\\%s", fpath, dt.name);
+				const str_t delPath = bcl::format(TEXT("%s\\%s"), fpath, dt.name);
 				if (dt.attrib == _A_SUBDIR) {
 					Dir::Clear(delPath.c_str());
 					Dir::Delete(delPath.c_str());
 				} else {
+#ifdef _UNICODE
+					remove(bcl::narrow(delPath).c_str());
+#else
 					remove(delPath.c_str());
+#endif
 				}
 			} while (_findnext(hFind, &dt) == 0);
 			_findclose(hFind);
 		}
 		return TRUE;
 	};
+	inline const char Clear(const str_t &fpath){ return Clear(fpath.c_str());}
 	inline const bool IsExistDef(const char *searchDef)
 	{
 		findHandle hFind;
@@ -280,30 +286,11 @@ namespace File{
 	// ファイル削除
 	inline const bool Delete(const char_t *fpath)
 	{
-		WIN32_FIND_DATA	pFindFileData;
-		HANDLE			hFind;
-		int				ret = 0;
-
-		// ファイル検索
-		const str_t dirPath = bcl::DirPath(fpath);
-		hFind = FindFirstFile(dirPath.c_str(), &pFindFileData);
-		if (hFind == INVALID_HANDLE_VALUE)
-			return false;
-
-		do {
-			if ((pFindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != FILE_ATTRIBUTE_DIRECTORY) {
-				// ファイル削除
-				char	strFile[_MAX_PATH];
-				sprintf(strFile, "%s%s", dirPath.c_str(), pFindFileData.cFileName);
-				ret = remove(strFile);
-			}
-		} while (FindNextFile(hFind, &pFindFileData));
-		FindClose(hFind);
-
-		if (ret == -1)
-			return false;
-
-		return true;
+		return ::DeleteFile(fpath)==TRUE?true:false;
+	};
+	inline const bool Delete(const str_t &fpath)
+	{
+		return Delete(fpath.c_str());
 	};
 	/********************************************************************
 	*	関数：copyFile
@@ -344,6 +331,10 @@ namespace File{
 		if(nRet == FALSE)
 			return -1;
 		return DeleteFile(spath);
+	};
+	inline const int Move(const str_t &spath, const str_t &fpath)
+	{
+		return Move(spath.c_str(), fpath.c_str());
 	};
 #ifdef _UNICODE
 	inline const char Copy(const char *spath, const char *fpath)
@@ -558,6 +549,7 @@ namespace File{
 		}
 		return out;
 	};
+	inline const int RemoveDef(const str_t &searchDef){ return RemoveDef(searchDef.c_str()); }
 	inline const bcl::time24	mTime(const bcl::char_t *file_name)
 	{
 		const bcl::time24 errTime(0,0,0,0,0,0);

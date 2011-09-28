@@ -40,9 +40,12 @@ public:
 	int    before_day;              //前回ファイル削除日
 
 	//ctor, dtor
-	log_message():dpath(L""),exe_name(L""),
-		office_no(0),unit_no(0),horo_no(0),level(0),days   (0),max_size_file(10000000),before_day   (0)
-	{};
+	log_message():
+		dpath(TEXT("")),exe_name(TEXT("")),
+		office_no(0),unit_no(0),horo_no(0),level(0),days(0),
+		max_size_file(10000000),before_day(0)
+	{
+	};
 	~log_message(){};
 
 	/********************************************************************
@@ -92,7 +95,7 @@ public:
 		//可変引数処理
 		va_start(ap, buf);
 
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+#ifdef _UNICODE
 		ret = _vsnwprintf(wk, sizeof(wk)-1, buf, ap);
 #else
 		ret = _vsnprintf(wk, sizeof(wk)-1, buf, ap);
@@ -105,9 +108,9 @@ public:
 		//現在時刻の取得
 		const bcl::time24 nowTime = bcl::NowTime();
 		//ログ出力フォルダ
-		const bcl::str_t sday = bcl::format(L"%04d/%02d/%02d", nowTime.year24(), nowTime.month24(), nowTime.day24() );
+		const bcl::str_t sday = bcl::format(TEXT("%04d/%02d/%02d"), nowTime.year24(), nowTime.month24(), nowTime.day24() );
 		//ログ出力時刻
-		const bcl::str_t stim = bcl::format(L"%04d/%02d/%02d %02d:%02d:%02d", nowTime.year24(), nowTime.month24(), nowTime.day24(), nowTime.hour24(), nowTime.minute(), nowTime.second());
+		const bcl::str_t stim = bcl::format(TEXT("%04d/%02d/%02d %02d:%02d:%02d"), nowTime.year24(), nowTime.month24(), nowTime.day24(), nowTime.hour24(), nowTime.minute(), nowTime.second());
 
 		//情報種別
 		sknd = knd;
@@ -122,43 +125,49 @@ public:
 		//詳細 
 		switch( wk_typ ) {
 		case DG_LOG_ERR :
-			styp = L"[エラー]";
+			styp = TEXT("[エラー]");
 			break;
 		case DG_LOG_INFO :
-			styp = L"[ 詳細 ]";
+			styp = TEXT("[ 詳細 ]");
 			break;
 		case DG_LOG_WARN :
-			styp = L"[ 警告 ]";
+			styp = TEXT("[ 警告 ]");
 			break;
 		case DG_LOG_NON :
-			styp = L"[      ]";
+			styp = TEXT("[      ]");
 			break;
 		default :
-			styp = L"[ 情報 ]";
+			styp = TEXT("[ 情報 ]");
 			break;
 		}
 
 		//メッセージ編集
 		if ( sknd.empty() == true ) {
-			msg = stim + L" " + styp + L" " + wk;
+			msg = stim + TEXT(" ") + styp + TEXT(" ") + wk;
 		} else {
-			msg = stim + L" " + styp + L" [" + sknd + L"] " + wk;
+			msg = stim + TEXT(" ") + styp + TEXT(" [") + sknd + TEXT("] ") + wk;
 		}
 
 		//標準出力
 		
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-		wprintf(L"%s\n", msg.c_str());
-#else
-		printf(L"%s\n", msg.c_str());
-#endif
-
+#ifdef _UNICODE
+		wprintf(TEXT("%s\n"), msg.c_str());
 		//ログ出力パス設定
 		if ( sknd.empty() == true ) {
-			ret = _snwprintf(fname, sizeof(fname)-1, L"%s\\log\\%s_%02d%02d%02d.log", dpath.c_str(), exe_name.c_str(), office_no, unit_no, horo_no);
+			ret = _snwprintf(fname, sizeof(fname)-1, TEXT("%s\\log\\%s_%02d%02d%02d.log"), dpath.c_str(), exe_name.c_str(), office_no, unit_no, horo_no);
 		} else {
-			ret = _snwprintf(fname, sizeof(fname)-1, L"%s\\log\\%s\\%s_%s_%02d%02d%02d.log", dpath.c_str(), sday.c_str(), exe_name.c_str(), sknd.c_str(), office_no, unit_no, horo_no);
+			ret = _snwprintf(fname, sizeof(fname)-1, TEXT("%s\\log\\%s\\%s_%s_%02d%02d%02d.log"), dpath.c_str(), sday.c_str(), exe_name.c_str(), sknd.c_str(), office_no, unit_no, horo_no);
 		}
+#else
+		printf(TEXT("%s\n"), msg.c_str());
+		//ログ出力パス設定
+		if ( sknd.empty() == true ) {
+			ret = _snprintf(fname, sizeof(fname)-1, TEXT("%s\\log\\%s_%02d%02d%02d.log"), dpath.c_str(), exe_name.c_str(), office_no, unit_no, horo_no);
+		} else {
+			ret = _snprintf(fname, sizeof(fname)-1, TEXT("%s\\log\\%s\\%s_%s_%02d%02d%02d.log"), dpath.c_str(), sday.c_str(), exe_name.c_str(), sknd.c_str(), office_no, unit_no, horo_no);
+		}
+#endif
+
 		//領域をオーバーした場合
 		if ( ret < 0 ) {
 			return;
@@ -204,11 +213,11 @@ public:
 			NULL);
 
 		//ログ出力
-		sp.tokenize((bcl::char_t *)lpMsgBuf, L"\n\r");
+		sp.tokenize((bcl::char_t *)lpMsgBuf, TEXT("\n\r"));
 		for (size_t i = 0; i < sp.size(); i++ ) {
 			wk = sp.at(i);
 			if ( wk.empty() == false ) {
-				put_msg(typ, lvl, knd, L"Code(%d)：%s", code, wk.c_str());
+				put_msg(typ, lvl, knd, TEXT("Code(%d)：%s"), code, wk.c_str());
 			}
 		}
 
@@ -229,9 +238,11 @@ public:
 	{
 
 		//ファイルパスの確認
-		if ( wcslen(fpath) < 1) {
-			return 0;
-		}
+#ifdef _UNICODE
+		if ( wcslen(fpath) < 1) {	return 0;		}
+#else
+		if ( strlen(fpath) < 1) {	return 0;		}
+#endif
 
 		//フォルダの確認
 		if ( bcl::Dir::IsExist(fpath) == false ) {
@@ -240,7 +251,7 @@ public:
 
 
 		//ファイルサイズの取得
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+#ifdef _UNICODE
 		struct _stat sts;
 		int ret = _wstat(fpath, &sts);
 #else
@@ -261,16 +272,16 @@ public:
 				bcl::char_t ext[_MAX_EXT];				//パスの分割
 
 
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+#ifdef _UNICODE
 				_wsplitpath(fpath, drive, dir, fname, ext);
 				while ( cnt < 100 ) {
 					//ファイルパスの設定
-					_snwprintf(wkpath, sizeof(wkpath)-1, L"%s%s%s_%d%s", drive, dir, fname, idx++, ext);
+					_snwprintf(wkpath, sizeof(wkpath)-1, TEXT("%s%s%s_%d%s"), drive, dir, fname, idx++, ext);
 #else
 				_splitpath(fpath, drive, dir, fname, ext);
 				while ( cnt < 100 ) {
 					//ファイルパスの設定
-					_snprintf(wkpath, sizeof(wkpath)-1, L"%s%s%s_%d%s", drive, dir, fname, idx++, ext);
+					_snprintf(wkpath, sizeof(wkpath)-1, TEXT("%s%s%s_%d%s"), drive, dir, fname, idx++, ext);
 #endif
 					//領域をオーバーした場合の処理
 					wkpath[_MAX_PATH-1] = '\0';

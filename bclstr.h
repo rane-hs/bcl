@@ -9,9 +9,6 @@
 #include <cassert>
 #include <fstream>
 #include <stdexcept>
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-#include <boost/lexical_cast.hpp>
-#endif
 
 namespace bcl{
 
@@ -63,13 +60,19 @@ class basic_split :protected std::vector<T>{
 #endif
 	
 	using array_type::clear;
+public:
+#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
+	using array_type::cbegin;
+	using array_type::cend;
+	using array_type::const_iterator;
+#endif
+	//using
 	using array_type::begin;
 	using array_type::end;
-public:
-	//using
 	using array_type::empty;
 	using array_type::at;
 	using array_type::size;
+	using array_type::iterator;
 	using array_type::operator[];
 
 	/********************************************************************
@@ -136,6 +139,17 @@ public:
 		}
 		return "";
 	}
+	T const ListString(const T &separator) {
+		if(empty() )return "";
+		const_iterator it = cbegin();
+		T dest = (*it);
+		++it;
+		for(;
+			it != cend() ; ++it){
+			dest += (separator + (*it));
+		}
+		return dest;
+	}
 };
 
 typedef basic_split<std::string> split;
@@ -170,8 +184,12 @@ inline const std::wstring widen(const std::string &src) {
 	std::wstring dest;
 	wchar_t *wcs = new wchar_t[src.length() + 1];
 #if (_MSC_VER > 1300)		//VC2003-
+# ifdef _CRT_SECURE_NO_DEPRECATE
+	mbstowcs(wcs, src.c_str(), src.length() + 1);
+# else
 	size_t	conved_length;
-	mbstowcs_s(&conved_length, wcs, src.length(), src.c_str(), src.length() + 1);
+	mbstowcs(wcs, src.c_str(), src.length() + 1);
+# endif
 #else
 	mbstowcs(wcs, src.c_str(), src.length() + 1);
 #endif
@@ -350,7 +368,7 @@ const Str_ squarize_line(const Str_ &s, const size_t &width)
 {
 	return (s.length() <= width)?
 		s:
-		s.substr(0, width) + L"\n" + squarize_line(s.substr(width), width);
+		s.substr(0, width) + TEXT("\n") + squarize_line(s.substr(width), width);
 }
 
 template <class Str_>
@@ -358,12 +376,12 @@ const Str_ rectangled(const Str_ &s, const size_t &width)
 {
 	if(s.length() < 1) return s;
 
-	bcl::basic_split<Str_> sp(s, L"\n");
+	bcl::basic_split<Str_> sp(s, TEXT("\n"));
 	Str_ out = squarize_line(sp.at(0), width);
 	for(size_t i=1;i<sp.size(); i++)
 	{
 		out += squarize_line(sp.at(0), width);
-		out += L"\n";
+		out += TEXT("\n");
 	}
 	return out;
 }
@@ -392,78 +410,30 @@ inline const std::string ReadFileString(const std::string &fpath){
 	return dest;
 }
 
-/*
- 文字列<- -> 数値　相互変換処理
- boost::lexical_castではキャストに失敗すると例外が飛ぶので
- 例外を投げないlexical_cast_s<T>などを定義
-	bcl::lexical_cast_s<int,-1>("5");	//-1が帰ってきたらエラー！
-*/
-/*!------------------------------------------------------------------
-	to value conversion
--------------------------------------------------------------------*/
-template <typename T>
-inline const T lexical_cast(const std::string &s){
-	return (s.length() < 1)?
-		0:
-		static_cast<T>(atol(s.c_str()));
-}
-template <typename T>
-inline const T lexical_cast(const std::wstring &s){
-	return (s.length() < 1)?
-		0:
-		static_cast<T>(_wtol(s.c_str()));
-}
-inline const double to_float(const std::string &s){
-	return (s.length() < 1)?
-		0.0:
-		atof(s.c_str());
-}
-
-#if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-//VC6ではテンプレートコンパイルにバグがあるため、これらは使えない
-
-template <>
-inline const float lexical_cast<float>(const std::string &s){
-	return (s.length() < 1)?
-		0.0:
-		static_cast<float>(atof(s.c_str()));
-}
-template <>
-inline const double lexical_cast<double>(const std::string &s){
-	return (s.length() < 1)?
-		0.0:
-		static_cast<double>(atof(s.c_str()));
-}
-template <typename T, typename S>
-const T lexical_cast_s(const S &src, T err) {
-	try{
-		const T dest = boost::lexical_cast<T>(S);
-	}catch(const boost::bad_lexical_cast &e){
-		return err;
-	}catch(...){
-		return err;
+template <class Str>
+Str const ListString(const std::vector<Str> &src, const Str &separator) {
+	if(src.empty() )return "";
+	std::vector<Str>::const_iterator it = src.cbegin();
+	Str dest = (*it);
+	++it;
+	for(;
+		it != src.cend() ; ++it){
+		dest += (separator + (*it));
 	}
 	return dest;
 }
-#endif
-/*!------------------------------------------------------------------
-	to string conversion
--------------------------------------------------------------------*/
-inline const std::string to_string(const int &a){	return bcl::format("%d", a); }
-inline const std::string to_string(const unsigned int &a){	return bcl::format("%d", a); }
-inline const std::string to_string(const long &a){	return bcl::format("%ld", a); }
-inline const std::string to_string(const unsigned long &a){	return bcl::format("%ld", a); }
-inline const std::string to_string(const float &a){	return bcl::format("%f", a); }
-inline const std::string to_string(const double &a){	return bcl::format("%lf", a); }
-inline const std::string to_string(const long double &a){	return bcl::format("%lf", a); }
-
-
-#ifdef __AFXWIN_H__	//mfc conversion
-
-const std::string Olettos(const COleDateTime s);
-const COleDateTime stoOlet(const std::string &s);
-
-#endif //__AFXWIN_H__
+template <class Str, class Itr>
+Str const ListString(const Itr &first, const Itr &end, const Str &separator) {
+	if(first == end)return "";
+	Itr it = first;
+	Str dest = (*it);
+	++it;
+	for(;
+		it != end ; ++it){
+		dest += (separator + (*it));
+	}
+	return dest;
+}
 
 } //bcl::
 

@@ -125,6 +125,7 @@ public:
 	const std::string to_string24(const std::string &desc=TIME24_YMDHNS) const
 #endif
 	{
+		if(!is_valid() ) return "";
 		std::string o = desc;
 		bcl::replace(o, "%24Y", bcl::format("%04d", year24()).c_str());
 		bcl::replace(o, "%24y", bcl::format("%02d", (year24()%100)).c_str());
@@ -135,6 +136,11 @@ public:
 		bcl::replace(o, "%24H", bcl::format("%02d", hour24()).c_str());
 		bcl::replace(o, "%24h", bcl::format("%2d", hour24()).c_str());
 		return to_string(o.c_str());
+	}
+	const time24 from_string(const std::string &src)
+	{
+		from_string(src.c_str(), TIME_YMDHNS);
+		return *this;
 	}
 
 	//operators
@@ -183,8 +189,23 @@ public:
 	const bool is_valid() const{
 		if(c_time() == 0) return false;
 		if(year() == 1900) return false;
+		if(year() < 1) return false;
+		if(month() < 1) return false;
+		if(day() < 1) return false;
+		if(hour() < 0) return false;
+		if(minute() < 0) return false;
+		if(second() < 0) return false;
 		return true;
 	}
+
+	//weekday()==6 ‚Æ‚¢‚¤ˆ—‚ªŒ™‚¢‚È‚Ì‚ÅŒÂ•Êˆ—‚ð•t‰Á‚µ‚Ä‚ ‚é
+	const bool is_sunday() const { return weekday() == 0;}
+	const bool is_monday() const { return weekday() == 1;}
+	const bool is_tuesday() const { return weekday() == 2;}
+	const bool is_wednesday() const { return weekday() == 3;}
+	const bool is_thursday() const { return weekday() == 4;}
+	const bool is_friday() const { return weekday() == 5;}
+	const bool is_saturday() const { return weekday() == 6;}
 };
 inline const time24 time_from_string(const std::string &src, const std::string &fmt="%Y/%m/%d %H:%M:%S")
 {
@@ -196,6 +217,7 @@ inline const time24 time_from_string(const char *src, const char *fmt)
 {
 	return time_from_string(std::string(src), std::string(fmt));
 }
+#if 0
 inline const clx::time_duration operator-(const time24 &ld, const time24 &rd)
 {
 	const size_t	src = static_cast<size_t>(ld.c_time() - rd.c_time());
@@ -205,6 +227,7 @@ inline const clx::time_duration operator-(const time24 &ld, const time24 &rd)
 	const size_t sec_buf =  min_buf/60;
 	return clx::time_duration(days_buf, hours_buf%24, min_buf%(60), sec_buf%(60));
 }
+#endif
 inline const time24 operator+(const time24 &ld, const clx::time_duration &rd)
 {
 	return time24(ld.c_time() + rd.c_time());
@@ -212,6 +235,10 @@ inline const time24 operator+(const time24 &ld, const clx::time_duration &rd)
 inline const time24 operator-(const time24 &ld, const clx::time_duration &rd)
 {
 	return time24(ld.c_time() - rd.c_time());
+}
+inline const clx::time_duration operator-(const time24 &ld, const time24 &rd)
+{
+	return clx::time_duration(ld.c_time() - rd.c_time());
 }
 
 inline const time24 NowTime(){ time24 s; return s.set_now(); }
