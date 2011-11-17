@@ -21,10 +21,10 @@ public:
 	ManagedFile(const bcl::char_t *fpath = NULL)
 	{
 		if(fpath)	filePath_ = fpath;
-		fUpdTime = bcl::NowTime();
+		if(ExistFile()) fUpdTime = bcl::NowTime();
 	}
 	//更新検出処理
-	const bool IsUpd()
+	const bool IsUpd() const
 	{
 		if(!ExistFile()) return false;
 		const bcl::time24 bufTime(FileTime());
@@ -37,8 +37,15 @@ public:
 
 #endif
 			return true;
-		}else
+		}else if(bufTime.is_valid()){
+			if(fUpdTime.is_valid()){
+				return false;
+			}else{
+				return true;
+			}
+		}else{
 			return false;
+		}
 	}
 	const bcl::time24 SetTime(){
 		return fUpdTime = FileTime();
@@ -46,14 +53,14 @@ public:
 	void SetTime(const bcl::time24 &s){
 		fUpdTime = s;
 	}
-	const bool ExistFile()
+	const bool ExistFile() const
 	{
 		return bcl::File::IsExist(filePath_.c_str());
 	};
 	//ファイルの時間をセット
 	void set_mtime(bcl::time24 *s){fUpdTime = *s;};
 	const bcl::time24 get_mtime(){return fUpdTime;};
-	const bcl::time24 FileTime()
+	const bcl::time24 FileTime() const
 	{
 		if(!ExistFile())
 			return bcl::time24(1970, 1, 1, 0, 0, 0);

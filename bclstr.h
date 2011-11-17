@@ -1,5 +1,5 @@
-#ifndef _MY_STR_LIB_H_
-#define _MY_STR_LIB_H_
+#ifndef _BCL_STR_H_
+#define _BCL_STR_H_
 
 
 #include <string>
@@ -9,6 +9,8 @@
 #include <cassert>
 #include <fstream>
 #include <stdexcept>
+#include <algorithm>
+#include <locale>
 
 namespace bcl{
 
@@ -104,24 +106,26 @@ public:
 	  戻り値：分割数
 	  説明  ：
 	********************************************************************/
-	const int tokenize(const T &s, const T &d)
+	const size_t tokenize(const T &s, const T &d)
 	{
-		int idx_s;
-		int idx_e;
+		//文字列が空
+		if (s.length() < 1){	push_back(s);	return 0; 		}
+		size_t idx_e = s.find(d);
+
+		if (idx_e == T::npos){	push_back(s);	return 0; 		}
+
+		size_t idx_s;
+
 		T wk;
 
 		//クリア
 		clear();
 
-		//文字列が空
-		if (s.length() < 1)
-			return 0;
-
 		//分割
 		idx_s = 0;
-		idx_e = -1;
+		idx_e = std::string::npos;
 		do {
-			idx_s = idx_e + 1;
+			idx_s = idx_e + d.length();
 			idx_e = s.find_first_of(d, idx_s);
 			wk = s.substr(idx_s, idx_e - idx_s);
 			push_back(wk);
@@ -281,6 +285,26 @@ inline const std::wstring format(const wchar_t* const format, ...)
 	return buffer;
 }
 
+struct equal_char_ignorecase {
+  bool operator()(char x, char y) const {
+    std::locale loc;
+    return std::tolower(x,loc) == std::tolower(y,loc);
+  }
+  bool operator()(wchar_t x, wchar_t y) const {
+    std::locale loc;
+    return std::tolower(x,loc) == std::tolower(y,loc);
+  }
+};
+
+inline bool icomp(const std::string& x, const std::string& y) 
+{
+  return (x.size() == y.size()) && std::equal(x.begin(), x.end(), y.begin(), equal_char_ignorecase());
+}
+inline bool icomp(const std::wstring& x, const std::wstring& y) 
+{
+  return (x.size() == y.size()) && std::equal(x.begin(), x.end(), y.begin(), equal_char_ignorecase());
+}
+
 template <class Str>
 inline const Str substr(const Str &s, size_t p, size_t m)
 {
@@ -312,23 +336,38 @@ inline const Str rm_crlf(const Str &s)
 /*
 	トリム
 */
+
 template <class Str>
-inline const Str trim(const Str &s, const Str &t)
+inline const Str trim(const Str &s, const Str &t1, const Str &t2)
 {
 	int idx_s;
 	int idx_e;
-	Str wk = "";
+	Str wk;
 
 	if (s.empty() == true)
 		return wk;
 
-	idx_s = s.find_first_not_of(t);
-	idx_e = s.find_last_not_of(t);
+	idx_s = s.find_first_not_of(t1);
+	idx_e = s.find_last_not_of(t2);
 	if (idx_s != Str::npos)
 		wk = s.substr(idx_s, idx_e - idx_s + 1);
 	return wk;
 };
 
+template <class Str>
+inline const Str trim(const Str &s, const Str &t)
+{
+	return trim<Str>(s, t, t);
+};
+
+inline const std::string trim(const std::string &s, const char *t){ return trim<std::string>(s, std::string(t));}
+inline const std::string trim(const std::string &s, const char *t1, const char *t2){
+	return trim<std::string>(s, std::string(t1), std::string(t2));
+}
+inline const std::wstring trim(const std::wstring &s, const wchar_t *t){ return trim<std::wstring>(s, std::wstring(t));}
+inline const std::wstring trim(const std::wstring &s, const wchar_t *t1, const wchar_t *t2){ 
+	return trim<std::wstring>(s, std::wstring(t1), std::wstring(t2));
+}
 /*
 	判定(数字)
 */
@@ -437,4 +476,4 @@ Str const ListString(const Itr &first, const Itr &end, const Str &separator) {
 
 } //bcl::
 
-#endif // _MY_STR_LIB_H_
+#endif // _BCL_STR_H_

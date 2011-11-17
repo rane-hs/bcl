@@ -5,7 +5,6 @@
 #ifndef __BCL_FILESYSTEM_H__
 #define __BCL_FILESYSTEM_H__
 
-#include <bcl/Time24.h>
 #include <bcl/bclstr.h>
 #include <string>
 #include <vector>
@@ -18,47 +17,52 @@
 
 namespace bcl{ //bcl::
 
-class FilePath{
-	str_t drv, dir, fname, ext;
-public:
-	FilePath(const str_t &drv_, const str_t &dir_, const str_t &fname_, const str_t &ext_):
-	  drv(drv_),dir(dir_),fname(fname_),ext(ext_){}
-#ifdef _UNICODE
-	FilePath(const str_t &fPath=L".\\"){
-#else
-	FilePath(const str_t &fPath=".\\"){
-#endif
-		char_t fpath_buf[2048];
-#ifdef _UNICODE
-		_wfullpath(fpath_buf, fPath.c_str(), 2048);
-#else
-		_fullpath(fpath_buf, fPath.c_str(), 2048);
-#endif
-		char_t	l_drv[32];
-		char_t	l_dir[512];
-		char_t	l_fname[256];
-		char_t	l_ext[32];
-#ifdef _UNICODE
-		int retCode = _wsplitpath_s(fpath_buf, l_drv, 32, l_dir, 512, l_fname, 256, l_ext, 32);
-#else
+	template <class Str>
+	class basic_filepath{
+		Str drv, dir, fname, ext;
+	public:
+		basic_filepath(const Str &drv_, const Str &dir_, const Str &fname_, const Str &ext_):
+		  drv(drv_),dir(dir_),fname(fname_),ext(ext_){}
+		basic_filepath(const std::wstring &fPath){
+			wchar_t fpath_buf[2048];
+			_wfullpath(fpath_buf, fPath.c_str(), 2048);
+			wchar_t	l_drv[32];
+			wchar_t	l_dir[512];
+			wchar_t	l_fname[256];
+			wchar_t	l_ext[32];
+			int retCode = _wsplitpath_s(fpath_buf, l_drv, 32, l_dir, 512, l_fname, 256, l_ext, 32);
+			drv = l_drv;
+			dir = l_dir;
+			fname = l_fname;
+			ext = l_ext;
+		};
+		basic_filepath(const std::string &fPath){
+			char	fpath_buf[2048];
+			_fullpath(fpath_buf, fPath.c_str(), 2048);
+			char	l_drv[32];
+			char	l_dir[512];
+			char	l_fname[256];
+			char	l_ext[32];
 #	if defined(_MSC_VER) && (_MSC_VER > 1200)	// > VC6
-		int retCode = _splitpath_s(fpath_buf, l_drv, 32, l_dir, 512, l_fname, 256, l_ext, 32);
+			int retCode = _splitpath_s(fpath_buf, l_drv, 32, l_dir, 512, l_fname, 256, l_ext, 32);
 #	else
-		_splitpath(fullPath.c_str(), l_drv, l_dir, l_fname, l_ext);
+			_splitpath(fullPath.c_str(), l_drv, l_dir, l_fname, l_ext);
 #	endif
-#endif
-		drv = l_drv;
-		dir = l_dir;
-		fname = l_fname;
-		ext = l_ext;
+			drv = l_drv;
+			dir = l_dir;
+			fname = l_fname;
+			ext = l_ext;
+		};
+		const Str Fname() const {		return fname;	}
+		const Str Ext() const {		return ext;	}
+		const Str Drv() const {		return drv;	}
+		const Str Dir() const {		return dir;	}
+		const Str DirPath() const {	return drv+dir;	}
+		const Str FileNameExt() const {	return fname+ext;	}
 	};
-	const str_t Fname() const {		return fname;	}
-	const str_t Ext() const {		return ext;	}
-	const str_t Drv() const {		return drv;	}
-	const str_t Dir() const {		return dir;	}
-	const str_t DirPath() const {	return drv+dir;	}
-	const str_t FileNameExt() const {	return fname+ext;	}
-};
+	typedef basic_filepath<bcl::str_t>		FilePath;
+	typedef basic_filepath<std::wstring>	FilePathW;
+	typedef basic_filepath<std::string>		FilePathA;
 
 inline const bcl::str_t DirPath(const bcl::str_t &fullpath){
 	return bcl::FilePath(fullpath).DirPath();
@@ -484,25 +488,25 @@ namespace File{
 		}
 		return out;
 	};
-	inline const bcl::time24	mTime(const char *file_name)
+	inline const time_t	mTime(const char *file_name)
 	{
-		const bcl::time24 errTime(0,0,0,0,0,0);
+		const time_t errTime(0);
 		if(!IsExist(file_name))	return errTime;
 		struct _stat st;
 		const int ret = _stat(file_name, &st);
 		if(ret != 0) 	return errTime;
 
-		return bcl::time24(st.st_mtime);
+		return st.st_mtime;
 	};
-	inline const bcl::time24	mTime(const wchar_t *file_name)
+	inline const time_t	mTime(const wchar_t *file_name)
 	{
-		const bcl::time24 errTime(0,0,0,0,0,0);
+		const time_t errTime(0);
 		if(!IsExist(file_name))	return errTime;
 		struct _stat st;
 		const int ret = _wstat(file_name, &st);
 		if(ret != 0) 	return errTime;
 
-		return bcl::time24(st.st_mtime);
+		return st.st_mtime;
 	};
 #else
 	inline void FindDef(const char *searchDef, std::vector<bcl::str_t> *pList)
@@ -550,15 +554,15 @@ namespace File{
 		return out;
 	};
 	inline const int RemoveDef(const str_t &searchDef){ return RemoveDef(searchDef.c_str()); }
-	inline const bcl::time24	mTime(const bcl::char_t *file_name)
+	inline const time_t	mTime(const bcl::char_t *file_name)
 	{
-		const bcl::time24 errTime(0,0,0,0,0,0);
+		const time_t errTime(0);
 		if(!IsExist(file_name))	return errTime;
 		struct _stat st;
 		const int ret = _stat(file_name, &st);
 		if(ret != 0) 	return errTime;
 
-		return bcl::time24(st.st_mtime);
+		return st.st_mtime;
 	};
 #endif
 };

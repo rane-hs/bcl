@@ -187,7 +187,7 @@ public:
 			year();
 	}
 	const bool is_valid() const{
-		if(c_time() == 0) return false;
+		if(c_time() < 1) return false;
 		if(year() == 1900) return false;
 		if(year() < 1) return false;
 		if(month() < 1) return false;
