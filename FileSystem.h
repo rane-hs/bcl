@@ -17,13 +17,12 @@
 
 namespace bcl{ //bcl::
 
-	template <class Str>
-	class basic_filepath{
-		Str drv, dir, fname, ext;
+	class FilePathW{
+		std::wstring drv, dir, fname, ext;
 	public:
-		basic_filepath(const Str &drv_, const Str &dir_, const Str &fname_, const Str &ext_):
+		FilePathW(const std::wstring &drv_, const std::wstring &dir_, const std::wstring &fname_, const std::wstring &ext_):
 		  drv(drv_),dir(dir_),fname(fname_),ext(ext_){}
-		basic_filepath(const std::wstring &fPath){
+		FilePathW(const std::wstring &fPath){
 			wchar_t fpath_buf[2048];
 			_wfullpath(fpath_buf, fPath.c_str(), 2048);
 			wchar_t	l_drv[32];
@@ -36,7 +35,19 @@ namespace bcl{ //bcl::
 			fname = l_fname;
 			ext = l_ext;
 		};
-		basic_filepath(const std::string &fPath){
+		const std::wstring Fname() const {		return fname;	}
+		const std::wstring Ext() const {		return ext;	}
+		const std::wstring Drv() const {		return drv;	}
+		const std::wstring Dir() const {		return dir;	}
+		const std::wstring DirPath() const {	return drv+dir;	}
+		const std::wstring FileNameExt() const {	return fname+ext;	}
+	};
+	class FilePath{
+		std::string drv, dir, fname, ext;
+	public:
+		FilePath(const std::string &drv_, const std::string &dir_, const std::string &fname_, const std::string &ext_):
+		  drv(drv_),dir(dir_),fname(fname_),ext(ext_){}
+		FilePath(const std::string &fPath){
 			char	fpath_buf[2048];
 			_fullpath(fpath_buf, fPath.c_str(), 2048);
 			char	l_drv[32];
@@ -53,16 +64,13 @@ namespace bcl{ //bcl::
 			fname = l_fname;
 			ext = l_ext;
 		};
-		const Str Fname() const {		return fname;	}
-		const Str Ext() const {		return ext;	}
-		const Str Drv() const {		return drv;	}
-		const Str Dir() const {		return dir;	}
-		const Str DirPath() const {	return drv+dir;	}
-		const Str FileNameExt() const {	return fname+ext;	}
+		const std::string Fname() const {		return fname;	}
+		const std::string Ext() const {		return ext;	}
+		const std::string Drv() const {		return drv;	}
+		const std::string Dir() const {		return dir;	}
+		const std::string DirPath() const {	return drv+dir;	}
+		const std::string FileNameExt() const {	return fname+ext;	}
 	};
-	typedef basic_filepath<bcl::str_t>		FilePath;
-	typedef basic_filepath<std::wstring>	FilePathW;
-	typedef basic_filepath<std::string>		FilePathA;
 
 inline const bcl::str_t DirPath(const bcl::str_t &fullpath){
 	return bcl::FilePath(fullpath).DirPath();
@@ -162,6 +170,7 @@ namespace Dir{
 		}
 		return ret;
 	};
+	inline const char Check(const std::string &fpath){ return Check(fpath.c_str());}
 	inline const char Delete(const char *dirpath)
 	{
 		if (!Dir::IsExist(dirpath)) {
@@ -329,17 +338,20 @@ namespace File{
 			return true;
 		}
 	};
-	inline const int Move(const char_t *spath, const char_t *fpath)
+	//move
+	inline const int Move(const char *spath, const char *fpath)
 	{
 		BOOL nRet = Copy(spath, fpath);
 		if(nRet == FALSE)
 			return -1;
 		return DeleteFile(spath);
 	};
-	inline const int Move(const str_t &spath, const str_t &fpath)
+	inline const int Move(const std::string &spath, const std::string &fpath)
 	{
 		return Move(spath.c_str(), fpath.c_str());
 	};
+
+	//copy
 #ifdef _UNICODE
 	inline const char Copy(const char *spath, const char *fpath)
 	{
@@ -389,6 +401,10 @@ namespace File{
 		}
 		return false;
 	};
+	inline const bool IsExistDef(const std::string &searchDef)
+	{
+		return IsExistDef(searchDef.c_str());
+	}
 	/********************************************************************
 	  関数  ： FindFileDef
 	  機能  ： フォルダ内ファイル
@@ -397,11 +413,9 @@ namespace File{
 				FALSE：失敗
 	  説明  ： 指定された検索条件にヒットするファイルがある場合、フルパスを返します
 	********************************************************************/
-	inline const bcl::str_t FindDef(const bcl::char_t *searchDef)
+	inline const std::wstring FindDef(const wchar_t *searchDef)
 	{
 		findHandle hFind;
-
-#ifdef _UNICODE
 		struct _wfinddata_t dt;
 		hFind = _wfindfirst(searchDef, &dt);
 		if (hFind != -1) {
@@ -413,16 +427,18 @@ namespace File{
 					continue;
 				} else {
 					_findclose(hFind);
-					return bcl::format(L"%s%s", bcl::FilePath(searchDef).DirPath().c_str(), dt.name);
+					return bcl::format(L"%s%s", bcl::FilePathW(searchDef).DirPath().c_str(), dt.name);
 				}
 			} while (_wfindnext(hFind, &dt) == 0);
 			_findclose(hFind);
 		}
 		return L"";
 	};
+	inline const std::string FindDef(const std::wstring &searchDef)
+	{	return bcl::narrow(FindDef(searchDef.c_str())); }
 	inline const std::string FindDef(const char *searchDef)
-	{	return bcl::narrow(FindDef(bcl::widen(searchDef).c_str())); }
-#else
+	{
+		findHandle hFind;
 		struct _finddata_t dt;
 		hFind = _findfirst(searchDef, &dt);
 		if (hFind != -1) {
@@ -441,7 +457,8 @@ namespace File{
 		}
 		return "";
 	};
-#endif
+	inline const std::string FindDef(const std::string &searchDef)
+	{	return FindDef(searchDef.c_str()); }
 
 #ifdef _UNICODE
 	inline void FindDef(const wchar_t *searchDef, std::vector<std::wstring> *pList)

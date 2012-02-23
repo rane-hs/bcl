@@ -6,42 +6,42 @@
 
 namespace bcl{	//bcl::
 
-#define TIME_YMDHNS "%Y/%m/%d %H:%M:%S"
-#define TIME_YMDHN "%Y/%m/%d %H:%M"
-#define TIME_YMD "%Y/%m/%d"
+#define FORMAT_TIME_YMDHNS "%Y/%m/%d %H:%M:%S"
+#define FORMAT_TIME_YMDHN "%Y/%m/%d %H:%M"
+#define FORMAT_TIME_YMD "%Y/%m/%d"
 
-#define TIME24_YMDHNS "%24Y/%24M/%24D %24H:%M:%S"
-#define TIME24_YMDHN "%24Y/%24M/%24D %24H:%M"
-#define TIME24_YMD "%24Y/%24M/%24D"
+#define FORMAT_TIME24_YMDHNS "%24Y/%24M/%24D %24H:%M:%S"
+#define FORMAT_TIME24_YMDHN "%24Y/%24M/%24D %24H:%M"
+#define FORMAT_TIME24_YMD "%24Y/%24M/%24D"
 
-#define TIME24_YMDHNS_U "%24Y%24M%24D%24H%M%S"
-#define TIME24_YMDHN_U  "%24Y%24M%24D%24H%M"
-#define TIME24_YMD_U    "%24Y%24M%24D"
+#define FORMAT_TIME24_YMDHNS_U "%24Y%24M%24D%24H%M%S"
+#define FORMAT_TIME24_YMDHN_U  "%24Y%24M%24D%24H%M"
+#define FORMAT_TIME24_YMD_U    "%24Y%24M%24D"
 
-#define TIME24_YMDHN_HYPHEN "%24Y-%24m-%24d %24H:%M:%S"
+#define FORMAT_TIME24_YMDHN_HYPHEN "%24Y-%24m-%24d %24H:%M:%S"
 
-#define TIME24_YMDHNS_NO_ZERO "%24Y/%24m/%24d %24H:%M:%S"
-#define TIME24_YMDHN_NO_ZERO "%24Y/%24m/%24d %24H:%M"
-#define TIME24_YMD_NO_ZERO "%24Y/%24m/%24d"
+#define FORMAT_TIME24_YMDHNS_NO_ZERO "%24Y/%24m/%24d %24H:%M:%S"
+#define FORMAT_TIME24_YMDHN_NO_ZERO "%24Y/%24m/%24d %24H:%M"
+#define FORMAT_TIME24_YMD_NO_ZERO "%24Y/%24m/%24d"
 
 #ifdef _UNICODE
-#define TIME_YMDHNS_W L"%Y/%m/%d %H:%M:%S"
-#define TIME_YMDHN_W L"%Y/%m/%d %H:%M"
-#define TIME_YMD_W L"%Y/%m/%d"
+#define FORMAT_TIME_YMDHNS_W L"%Y/%m/%d %H:%M:%S"
+#define FORMAT_TIME_YMDHN_W L"%Y/%m/%d %H:%M"
+#define FORMAT_TIME_YMD_W L"%Y/%m/%d"
 
-#define TIME24_YMDHNS_W L"%24Y/%24M/%24D %24H:%M:%S"
-#define TIME24_YMDHN_W L"%24Y/%24M/%24D %24H:%M"
-#define TIME24_YMD_W L"%24Y/%24M/%24D"
+#define FORMAT_TIME24_YMDHNS_W L"%24Y/%24M/%24D %24H:%M:%S"
+#define FORMAT_TIME24_YMDHN_W L"%24Y/%24M/%24D %24H:%M"
+#define FORMAT_TIME24_YMD_W L"%24Y/%24M/%24D"
 
-#define TIME24_YMDHNS_U_W L"%24Y%24M%24D%24H%M%S"
-#define TIME24_YMDHN_U_W  L"%24Y%24M%24D%24H%M"
-#define TIME24_YMD_U_W    L"%24Y%24M%24D"
+#define FORMAT_TIME24_YMDHNS_U_W L"%24Y%24M%24D%24H%M%S"
+#define FORMAT_TIME24_YMDHN_U_W  L"%24Y%24M%24D%24H%M"
+#define FORMAT_TIME24_YMD_U_W    L"%24Y%24M%24D"
 
-#define TIME24_YMDHN_HYPHEN_W L"%24Y-%24m-%24d %24H:%M:%S"
+#define FORMAT_TIME24_YMDHN_HYPHEN_W L"%24Y-%24m-%24d %24H:%M:%S"
 
-#define TIME24_YMDHNS_NO_ZERO_W L"%24Y/%24m/%24d %24H:%M:%S"
-#define TIME24_YMDHN_NO_ZERO_W L"%24Y/%24m/%24d %24H:%M"
-#define TIME24_YMD_NO_ZERO_W L"%24Y/%24m/%24d"
+#define FORMAT_TIME24_YMDHNS_NO_ZERO_W L"%24Y/%24m/%24d %24H:%M:%S"
+#define FORMAT_TIME24_YMDHN_NO_ZERO_W L"%24Y/%24m/%24d %24H:%M"
+#define FORMAT_TIME24_YMD_NO_ZERO_W L"%24Y/%24m/%24d"
 #endif
 
 typedef clx::date_time clx_time;
@@ -119,10 +119,14 @@ public:
 		reset(); return *this;
 	}
 
+	//デフォルト引数とせず別個で書いているのはVCのデバッガで見やすくするためである
+	const std::string to_string24() const
+	{	return to_string24(FORMAT_TIME24_YMDHNS);
+	}
 #ifdef _UNICODE
-	const std::string to_string24(const std::string &desc=TIME24_YMDHNS) const
+	const std::string to_string24(const std::string &desc) const
 #else
-	const std::string to_string24(const std::string &desc=TIME24_YMDHNS) const
+	const std::string to_string24(const std::string &desc) const
 #endif
 	{
 		if(!is_valid() ) return "";
@@ -139,7 +143,7 @@ public:
 	}
 	const time24 from_string(const std::string &src)
 	{
-		from_string(src.c_str(), TIME_YMDHNS);
+		from_string(src.c_str(), FORMAT_TIME_YMDHNS);
 		return *this;
 	}
 
@@ -242,34 +246,34 @@ inline const clx::time_duration operator-(const time24 &ld, const time24 &rd)
 }
 
 inline const time24 NowTime(){ time24 s; return s.set_now(); }
-inline const std::string ttos24_ymd(const time24 &tim){ return tim.to_string24(TIME24_YMD); }
-inline const std::string ttos24(const time24 &tim, const std::string &s=TIME24_YMDHNS){ return tim.to_string24(s.c_str()); }
-inline const std::string ttos(const time24 &tim, const std::string &s = TIME_YMDHNS){ return tim.to_string(s.c_str()); }
-inline const std::string ttos_ymd(const time24 &tim){ return tim.to_string(TIME_YMD); }
+inline const std::string ttos24_ymd(const time24 &tim){ return tim.to_string24(FORMAT_TIME24_YMD); }
+inline const std::string ttos24(const time24 &tim, const std::string &s=FORMAT_TIME24_YMDHNS){ return tim.to_string24(s.c_str()); }
+inline const std::string ttos(const time24 &tim, const std::string &s = FORMAT_TIME_YMDHNS){ return tim.to_string(s.c_str()); }
+inline const std::string ttos_ymd(const time24 &tim){ return tim.to_string(FORMAT_TIME_YMD); }
 inline const std::string ttos24_ymd(const time_t &tim)
 {
 	time24 s(tim);
-	return s.to_string24(TIME24_YMD);
+	return s.to_string24(FORMAT_TIME24_YMD);
 }
 inline const std::string ttos24(const time_t &tim)
 { 
 	time24 s(tim);
-	return s.to_string24(TIME24_YMDHNS); 
+	return s.to_string24(FORMAT_TIME24_YMDHNS); 
 }
 inline const std::string ttos(const time_t &tim)
 { 
 	time24 s(tim);
-	return s.to_string(TIME_YMDHNS); 
+	return s.to_string(FORMAT_TIME_YMDHNS); 
 }
 inline const std::string ttos_ymd(const time_t &tim)
 { 
 	time24 s(tim);
-	return s.to_string(TIME_YMD); 
+	return s.to_string(FORMAT_TIME_YMD); 
 }
 inline const time_t string_to_time(const std::string &s)
 { 
 	time24	src;
-	src.from_string(s.c_str(), TIME_YMDHNS);
+	src.from_string(s.c_str(), FORMAT_TIME_YMDHNS);
 	return src.c_time();
 }
 

@@ -340,15 +340,13 @@ inline const Str rm_crlf(const Str &s)
 template <class Str>
 inline const Str trim(const Str &s, const Str &t1, const Str &t2)
 {
-	int idx_s;
-	int idx_e;
 	Str wk;
 
 	if (s.empty() == true)
 		return wk;
 
-	idx_s = s.find_first_not_of(t1);
-	idx_e = s.find_last_not_of(t2);
+	const size_t idx_s = s.find_first_not_of(t1);
+	const size_t idx_e = s.find_last_not_of(t2);
 	if (idx_s != Str::npos)
 		wk = s.substr(idx_s, idx_e - idx_s + 1);
 	return wk;

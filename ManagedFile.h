@@ -68,6 +68,7 @@ public:
 			return bcl::time24(bcl::File::mTime(filePath_.c_str()));
 	}
 	bcl::str_t FilePath() const{ return filePath_;}
+	void SetPath(const bcl::str_t &p_) { filePath_ = p_;}
 protected:
 	bcl::str_t		filePath_;
 	bcl::time24		fUpdTime;
